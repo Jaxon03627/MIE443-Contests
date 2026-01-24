@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include <string>
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
@@ -56,12 +57,27 @@ public:
         bumpers_["bump_right"]        = false;
  
         RCLCPP_INFO(this->get_logger(), "Contest 1 node initialized. Running for 480 seconds.");
+
+        start_time = this->now();
+        angular_ = 0.0;
+        linear_ = 0.0;
+        pos_x_ = 0.0;
+        pos_y_ = 0.0;
+        yaw_ = 0.0;
+        minLaserDist_ = std::numeric_limits<float>::infinity();
+        nLasers_ = 0;
+        desiredNLasers_ = 0;
+        desiredAngle_ = 5;
     }
 
 private:
     void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan)
     {
-        // implement your code here
+      //(void) scan;  // implement your code here
+      nLasers_ = (scan->angle_max - scan->angle_min) / scan->angle_increment;
+      laserRange_= scan->ranges;
+      desiredNLasers_= deg2rad(desiredAngle_)/(scan->angle_increment);
+      RCLCPP_INFO(this->get_logger(), "Size of laser scan array: %d, and size of offset", nLasers_, desiredNLasers_);
     }
 
     void odomCallback(const nav_msgs::msg::Odometry::SharedPtr odom)
@@ -115,7 +131,34 @@ private:
         }
 
         // Implement your exploration code here
+        /*
+        bool any_bumper_pressed = false; 
+        for (const auto& [key, val] : bumpers_) {
+            if (val) {
+                any_bumper_pressed = true;
+                
+                break;
+            }
+        }
 
+        if (pos_x_ < 0.5 && yaw_ < M_PI /12 && !any_bumper_pressed) {
+            
+            angular_ = 0.0;
+            linear_ = 0.2;
+        } 
+        else if (yaw_> M_PI/2 && pos_x_ > 0.5 && !any_bumper_pressed){
+
+            angular_ = M_PI /6; 
+            linear_ = 0.0; 
+        } 
+        
+        else {
+            linear_ = 0.0;
+            angular_ = 0.0; // Turn right in place
+            rclcpp::shutdown();
+            return;
+        }
+        */
         // Set velocity command
         geometry_msgs::msg::TwistStamped vel;
         vel.header.stamp = this->now();
@@ -139,9 +182,13 @@ private:
     double pos_y_;
     double yaw_;
     std::map<std::string, bool> bumpers_;
+    float minLaserDist_;
+    int32_t nLasers_;
+    int32_t desiredNLasers_;
+    int32_t desiredAngle_;
+    std::vector<float> laserRange_;
     
 };
-
 
 int main(int argc, char** argv)
 {
